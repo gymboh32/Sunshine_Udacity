@@ -1,9 +1,12 @@
 package org.ragecastle.sunshine_udacity;
 
 import android.app.Fragment;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -11,6 +14,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -31,6 +35,7 @@ import java.util.List;
  */
 public class MainFragment extends Fragment {
 
+    private final String LOG_TAG = MainFragment.class.getSimpleName();
     private ArrayAdapter<String> forecastAdapter;
     private String result = "";
 
@@ -38,10 +43,17 @@ public class MainFragment extends Fragment {
     }
 
     @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        FetchWeatherTask fetch = new FetchWeatherTask();
+        fetch.execute(Integer.toString(7));
+    }
+
+    @Override
     public View onCreateView(LayoutInflater layoutInflater, ViewGroup viewGroup, Bundle savedInstanceState){
         View rootView = layoutInflater.inflate(R.layout.fragment_main, viewGroup, false);
 
-        String[] forecastArray = {
+        final String[] forecastArray = {
           "Today - Sunny - 88/63",
                 "Tomorrow - Cloudy - 70/50",
                 "Monday - Weather - High/Low",
@@ -61,7 +73,17 @@ public class MainFragment extends Fragment {
         ListView listView;
         listView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listView.setAdapter(forecastAdapter);
-
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                //get the info for the array list item being clicked
+                String forecast = forecastAdapter.getItem(position);
+                //create new intent to launch the detail page
+                Intent intent = new Intent(getActivity(), DetailActivity.class);
+                intent.putExtra(Intent.EXTRA_TEXT, forecast);
+                startActivity(intent);
+            }
+        });
         setHasOptionsMenu(true);
 
         return rootView;
@@ -71,7 +93,7 @@ public class MainFragment extends Fragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        inflater.inflate(R.menu.menu_fragment, menu);
+        inflater.inflate(R.menu.menu_main_fragment, menu);
     }
 
     @Override
@@ -84,16 +106,15 @@ public class MainFragment extends Fragment {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
             FetchWeatherTask fetch = new FetchWeatherTask();
-            fetch.execute("11776", "metric", Integer.toString(7));
+            fetch.execute(Integer.toString(7));
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
-    private class FetchWeatherTask extends AsyncTask<String, Void, String[]>{
+
+    public class FetchWeatherTask extends AsyncTask<String, Void, String[]>{
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
-
-
 
         @Override
         protected String[] doInBackground(String... params) {
@@ -103,6 +124,17 @@ public class MainFragment extends Fragment {
             InputStream inputStream = null;
             StringBuffer buffer = null;
             String result = null;
+            String zip;
+            String units;
+            SharedPreferences sharedPref;
+
+            //get location preferences
+            sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            //use location preferences
+            zip = sharedPref.getString(getString(R.string.pref_location_key),
+                    getString(R.string.pref_default_location));
+            units = sharedPref.getString(getString(R.string.pref_units_key),
+                    getString(R.string.pref_default_units));
 
             try {
                 final String BASE_URL = "http://api.openweathermap.org/data/2.5/forecast";
@@ -113,9 +145,9 @@ public class MainFragment extends Fragment {
                 final String APIKEY = "2cc49234c210678f5634d620744e7202";
 
                 Uri builder = Uri.parse(BASE_URL).buildUpon()
-                        .appendQueryParameter(ZIP_PARAM, params[0])
-                        .appendQueryParameter(UNITS_PARAM, params[1])
-                        .appendQueryParameter(DAYS_PARAM, params[2])
+                        .appendQueryParameter(ZIP_PARAM, zip)
+                        .appendQueryParameter(UNITS_PARAM, units)
+                        .appendQueryParameter(DAYS_PARAM, params[0])
                         .appendQueryParameter(APPID_PARAM, APIKEY)
                         .build();
 

@@ -44,10 +44,7 @@ public class DataParser {
 
             JSONObject temp = dayForecast.getJSONObject("main");
 
-            high = temp.getDouble("temp_max");
-            low = temp.getDouble("temp_min");
-
-            highAndLow = Math.round(high) + "/" + Math.round(low);
+            highAndLow = getHighAndLow(temp);
 
             results[i] = day + " - " + description + " - " + highAndLow;
         }
@@ -57,6 +54,24 @@ public class DataParser {
 
     private static String getReadableDateString(long dateTime) {
         SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd", Locale.US);
-        return shortenedDateFormat.format(dateTime);    }
+        return shortenedDateFormat.format(dateTime);
+    }
+
+    private static String getHighAndLow(JSONObject jsonObject){
+        double high, low;
+        String highAndLow;
+
+        try {
+            high = jsonObject.getDouble("temp_max");
+            low = jsonObject.getDouble("temp_min");
+            highAndLow = Math.round(high) + "/" + Math.round(low);
+
+            return highAndLow;
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 
 }
